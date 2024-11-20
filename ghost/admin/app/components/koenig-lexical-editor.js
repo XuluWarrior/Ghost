@@ -131,13 +131,9 @@ class ErrorHandler extends React.Component {
     }
 
     render() {
-        if (this.state.hasError) {
-            return (
-                <p className="koenig-react-editor-error">Loading has failed. Try refreshing the browser!</p>
-            );
-        }
-
-        return this.props.children;
+        return this.state.hasError
+            ? <p className="koenig-react-editor-error">Loading has failed. Try refreshing the browser!</p>
+            : this.props.children;
     }
 }
 
@@ -181,29 +177,26 @@ export default class KoenigLexicalEditor extends Component {
     editorResource = this.koenig.resource;
 
     get pinturaJsUrl() {
-        if (!this.settings.pintura) {
-            return null;
-        }
-        return this.config.pintura?.js || this.settings.pinturaJsUrl;
+        return this.settings.pintura
+            ? this.config.pintura?.js || this.settings.pinturaJsUrl
+            : null;
     }
 
     get pinturaCSSUrl() {
-        if (!this.settings.pintura) {
-            return null;
-        }
-        return this.config.pintura?.css || this.settings.pinturaCssUrl;
+        return this.settings.pintura
+            ? this.config.pintura?.css || this.settings.pinturaCssUrl
+            : null;
     }
 
     get pinturaConfig() {
         const jsUrl = this.getImageEditorJSUrl();
         const cssUrl = this.getImageEditorCSSUrl();
-        if (!jsUrl || !cssUrl) {
-            return null;
-        }
-        return {
-            jsUrl,
-            cssUrl
-        };
+        return (jsUrl && cssUrl)
+            ? {
+                jsUrl,
+                cssUrl
+            }
+            : null;
     }
 
     getImageEditorJSUrl() {
@@ -305,9 +298,8 @@ export default class KoenigLexicalEditor extends Component {
             ];
 
             const memberLinks = () => {
-                let links = [];
-                if (this.membersUtils.paidMembersEnabled) {
-                    links = [
+                return this.membersUtils.paidMembersEnabled
+                    ? [
                         {
                             label: 'Paid signup',
                             value: '#/portal/signup'
@@ -315,32 +307,26 @@ export default class KoenigLexicalEditor extends Component {
                         {
                             label: 'Upgrade or change plan',
                             value: '#/portal/account/plans'
-                        }];
-                }
-
-                return links;
+                        }]
+                    : [];
             };
 
             const donationLink = () => {
-                if (this.settings.donationsEnabled) {
-                    return [{
+                return this.settings.donationsEnabled
+                    ? [{
                         label: 'Tips and donations',
                         value: '#/portal/support'
-                    }];
-                }
-
-                return [];
+                    }]
+                    : [];
             };
 
             const recommendationLink = () => {
-                if (this.settings.recommendationsEnabled) {
-                    return [{
+                return this.settings.recommendationsEnabled
+                    ? [{
                         label: 'Recommendations',
                         value: '#/portal/recommendations'
-                    }];
-                }
-
-                return [];
+                    }]
+                    : [];
             };
 
             const offersLinks = await offerUrls.call(this);
@@ -449,10 +435,9 @@ export default class KoenigLexicalEditor extends Component {
             const hasDirectKeys = !!(this.settings.stripeSecretKey && this.settings.stripePublishableKey);
             const hasConnectKeys = !!(this.settings.stripeConnectSecretKey && this.settings.stripeConnectPublishableKey);
 
-            if (this.config.stripeDirect) {
-                return hasDirectKeys;
-            }
-            return hasDirectKeys || hasConnectKeys;
+            return this.config.stripeDirect
+                ? hasDirectKeys
+                : hasDirectKeys || hasConnectKeys;
         };
 
         const defaultCardConfig = {
