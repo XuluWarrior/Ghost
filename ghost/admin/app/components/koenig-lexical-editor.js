@@ -287,41 +287,35 @@ export default class KoenigLexicalEditor extends Component {
                 {label: 'Free signup', value: '#/portal/signup/free'}
             ];
 
-            const memberLinks = () => {
-                return this.membersUtils.paidMembersEnabled
-                    ? [
-                        {
-                            label: 'Paid signup',
-                            value: '#/portal/signup'
-                        },
-                        {
-                            label: 'Upgrade or change plan',
-                            value: '#/portal/account/plans'
-                        }]
-                    : [];
-            };
-
-            const donationLink = () => {
-                return this.settings.donationsEnabled
-                    ? [{
-                        label: 'Tips and donations',
-                        value: '#/portal/support'
+            const memberLinks = this.membersUtils.paidMembersEnabled
+                ? [
+                    {
+                        label: 'Paid signup',
+                        value: '#/portal/signup'
+                    },
+                    {
+                        label: 'Upgrade or change plan',
+                        value: '#/portal/account/plans'
                     }]
-                    : [];
-            };
+                : [];
 
-            const recommendationLink = () => {
-                return this.settings.recommendationsEnabled
-                    ? [{
-                        label: 'Recommendations',
-                        value: '#/portal/recommendations'
-                    }]
-                    : [];
-            };
+            const donationLink = this.settings.donationsEnabled
+                ? [{
+                    label: 'Tips and donations',
+                    value: '#/portal/support'
+                }]
+                : [];
+
+            const recommendationLink = this.settings.recommendationsEnabled
+                ? [{
+                    label: 'Recommendations',
+                    value: '#/portal/recommendations'
+                }]
+                : [];
 
             const offersLinks = await offerUrls.call(this);
 
-            return [...defaults, ...memberLinks(), ...donationLink(), ...recommendationLink(), ...offersLinks];
+            return [...defaults, ...memberLinks, ...donationLink, ...recommendationLink, ...offersLinks];
         };
 
         const fetchLabels = async () => {
