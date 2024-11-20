@@ -235,19 +235,16 @@ export default class KoenigLexicalEditor extends Component {
     }
 
     async fetchOffers() {
-        if (this.offers) {
-            return this.offers;
+        if (!this.offers) {
+            this.offers = await this.store.query('offer', {limit: 'all', filter: 'status:active'});
         }
-        this.offers = await this.store.query('offer', {limit: 'all', filter: 'status:active'});
         return this.offers;
     }
 
     async fetchLabels() {
-        if (this.labels) {
-            return this.labels;
+        if (!this.labels) {
+            this.labels = await this.store.query('label', {limit: 'all', fields: 'id, name'});
         }
-
-        this.labels = await this.store.query('label', {limit: 'all', fields: 'id, name'});
         return this.labels;
     }
 
