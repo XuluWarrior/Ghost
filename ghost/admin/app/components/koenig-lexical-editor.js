@@ -67,24 +67,30 @@ function DollarIcon({...props}) {
 export function decoratePostSearchResult(item, settings) {
     const date = moment.utc(item.publishedAt).tz(settings.timezone).format('D MMM YYYY');
 
-    item.metaText = date;
+    const metaData = {
+        metaText: date
+    };
 
     if (settings.membersEnabled && item.visibility) {
         switch (item.visibility) {
         case 'members':
-            item.MetaIcon = LockIcon;
-            item.metaIconTitle = 'Members only';
+            metaData.MetaIcon = LockIcon;
+            metaData.metaIconTitle = 'Members only';
             break;
         case 'paid':
-            item.MetaIcon = DollarIcon;
-            item.metaIconTitle = 'Paid-members only';
+            metaData.MetaIcon = DollarIcon;
+            metaData.metaIconTitle = 'Paid-members only';
             break;
         case 'tiers':
-            item.MetaIcon = DollarIcon;
-            item.metaIconTitle = 'Specific tiers only';
+            metaData.MetaIcon = DollarIcon;
+            metaData.metaIconTitle = 'Specific tiers only';
             break;
         }
     }
+    return {
+        ...item,
+        ...metaData
+    };
 }
 
 /**
@@ -340,9 +346,7 @@ export default class KoenigLexicalEditor extends Component {
                     url: post.url,
                     visibility: post.visibility,
                     publishedAt: post.publishedAtUTC.toISOString()
-                }));
-
-                results.forEach(item => decoratePostSearchResult(item, this.settings));
+                })).map(post => decoratePostSearchResult(post, this.settings));
 
                 this.defaultLinks = [{
                     label: 'Latest posts',
@@ -377,7 +381,7 @@ export default class KoenigLexicalEditor extends Component {
 
                 // update the group items with metadata
                 if (group.groupName === 'Posts' || group.groupName === 'Pages') {
-                    items.forEach(item => decoratePostSearchResult(item, this.settings));
+                    items = items.map(item => decoratePostSearchResult(item, this.settings));
                 }
 
                 return {
