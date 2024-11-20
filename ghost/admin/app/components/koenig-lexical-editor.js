@@ -434,7 +434,7 @@ export default class KoenigLexicalEditor extends Component {
             siteUrl: this.config.getSiteUrl('/'),
             stripeEnabled: checkStripeEnabled() // returns a boolean
         };
-        const cardConfig = Object.assign({}, defaultCardConfig, props.cardConfig, {pinturaConfig: this.pinturaConfig});
+        const cardConfig = {...defaultCardConfig, ...props.cardConfig, pinturaConfig: this.pinturaConfig};
 
         const useFileUpload = (type = 'image') => {
             const [progress, setProgress] = React.useState(0);
