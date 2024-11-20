@@ -202,12 +202,8 @@ export default class KoenigLexicalEditor extends Component {
     getImageEditorJSUrl() {
         let importUrl = this.pinturaJsUrl;
 
-        if (!importUrl) {
-            return null;
-        }
-
         // load the script from admin root if relative
-        if (importUrl.startsWith('/')) {
+        if (importUrl?.startsWith('/')) {
             importUrl = window.location.origin + this.ghostPaths.adminRoot.replace(/\/$/, '') + importUrl;
         }
         return importUrl;
@@ -216,12 +212,8 @@ export default class KoenigLexicalEditor extends Component {
     getImageEditorCSSUrl() {
         let cssImportUrl = this.pinturaCSSUrl;
 
-        if (!cssImportUrl) {
-            return null;
-        }
-
         // load the css from admin root if relative
-        if (cssImportUrl.startsWith('/')) {
+        if (cssImportUrl?.startsWith('/')) {
             cssImportUrl = window.location.origin + this.ghostPaths.adminRoot.replace(/\/$/, '') + cssImportUrl;
         }
         return cssImportUrl;
