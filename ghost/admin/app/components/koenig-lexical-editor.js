@@ -319,18 +319,7 @@ export default class KoenigLexicalEditor extends Component {
         };
 
         const fetchLabels = async () => {
-            let labels = [];
-            try {
-                labels = await this.fetchLabels();
-            } catch (e) {
-                // Do not throw cancellation errors
-                if (didCancel(e)) {
-                    return;
-                }
-
-                throw e;
-            }
-
+            const labels = await this.fetchLabels();
             return labels.map(label => label.name);
         };
 
