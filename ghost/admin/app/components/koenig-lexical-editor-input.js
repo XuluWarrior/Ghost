@@ -38,27 +38,27 @@ class ErrorHandler extends React.Component {
 }
 
 const KoenigComposer = ({editorResource, ...props}) => {
-    const {KoenigComposer: _KoenigComposer, MINIMAL_NODES: _MINIMAL_NODES} = editorResource.read();
+    const {KoenigComposer: _KoenigComposer, MINIMAL_NODES: _MINIMAL_NODES} = editorResource.koenigLexical;
     return <_KoenigComposer nodes={_MINIMAL_NODES} {...props} />;
 };
 
 const KoenigComposableEditor = ({editorResource, ...props}) => {
-    const {KoenigComposableEditor: _KoenigComposableEditor, MINIMAL_TRANSFORMERS: _MINIMAL_TRANSFORMERS} = editorResource.read();
+    const {KoenigComposableEditor: _KoenigComposableEditor, MINIMAL_TRANSFORMERS: _MINIMAL_TRANSFORMERS} = editorResource.koenigLexical;
     return <_KoenigComposableEditor markdownTransformers={_MINIMAL_TRANSFORMERS} {...props} />;
 };
 
 const HtmlOutputPlugin = ({editorResource, ...props}) => {
-    const {HtmlOutputPlugin: _HtmlOutputPlugin} = editorResource.read();
+    const {HtmlOutputPlugin: _HtmlOutputPlugin} = editorResource.koenigLexical;
     return <_HtmlOutputPlugin {...props} />;
 };
 
 const EmojiPickerPlugin = ({editorResource, ...props}) => {
-    const {EmojiPickerPlugin: _EmojiPickerPlugin} = editorResource.read();
+    const {EmojiPickerPlugin: _EmojiPickerPlugin} = editorResource.koenigLexical;
     return <_EmojiPickerPlugin {...props} />;
 };
 
 const TKCountPlugin = ({editorResource, ...props}) => {
-    const {TKCountPlugin: _TKCountPlugin} = editorResource.read();
+    const {TKCountPlugin: _TKCountPlugin} = editorResource.koenigLexical;
     return <_TKCountPlugin {...props} />;
 };
 
@@ -70,7 +70,7 @@ export default class KoenigLexicalEditorInput extends Component {
 
     @inject config;
 
-    editorResource = this.koenig.resource;
+    editorResource = this.koenig;
 
     get emojiPicker() {
         return this.args.emojiPicker ?? true;
