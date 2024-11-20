@@ -384,7 +384,7 @@ export default class KoenigLexicalEditor extends Component {
         return filteredResults;
     }
 
-    checkStripeEnabled() {
+    get stripeEnabled() {
         const hasDirectKeys = !!(this.settings.stripeSecretKey && this.settings.stripePublishableKey);
         const hasConnectKeys = !!(this.settings.stripeConnectSecretKey && this.settings.stripeConnectPublishableKey);
 
@@ -394,7 +394,7 @@ export default class KoenigLexicalEditor extends Component {
     }
 
     ReactComponent = (props) => {
-        const {fetchEmbed, fetchCollectionPosts, fetchAutocompleteLinks, fetchLabels, searchLinks} = this;
+        const {fetchEmbed, fetchCollectionPosts, fetchAutocompleteLinks, fetchLabels, searchLinks, stripeEnabled} = this;
 
         const unsplashConfig = {
             defaultHeaders: {
@@ -427,7 +427,7 @@ export default class KoenigLexicalEditor extends Component {
             siteTitle: this.settings.title,
             siteDescription: this.settings.description,
             siteUrl: this.config.getSiteUrl('/'),
-            stripeEnabled: this.checkStripeEnabled() // returns a boolean
+            stripeEnabled // returns a boolean
         };
         const cardConfig = {...defaultCardConfig, ...props.cardConfig, pinturaConfig: this.pinturaConfig};
 
