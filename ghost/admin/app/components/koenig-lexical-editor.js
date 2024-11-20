@@ -320,31 +320,35 @@ export default class KoenigLexicalEditor extends Component {
         return [...defaults, ...memberLinks, ...donationLink, ...recommendationLink, ...offersLinks];
     }
 
+    async fetchDefaultLinks() {
+        // we cache the default links to avoid fetching them every time
+        if (this.defaultLinks) {
+            return this.defaultLinks;
+        }
+
+        const posts = await this.store.query('post', {filter: 'status:published', fields: 'id,url,title,visibility,published_at', order: 'published_at desc', limit: 5});
+        // NOTE: these posts are Ember Data models, not plain objects like the search results
+        const results = posts.toArray().map(post => ({
+            groupName: 'Latest posts',
+            id: post.id,
+            title: post.title,
+            url: post.url,
+            visibility: post.visibility,
+            publishedAt: post.publishedAtUTC.toISOString()
+        })).map(post => decoratePostSearchResult(post, this.settings));
+
+        this.defaultLinks = [{
+            label: 'Latest posts',
+            items: results
+        }];
+        return this.defaultLinks;
+    }
+
     @action
     async searchLinks(term) {
         // when no term is present we should show latest 5 posts
         if (!term) {
-            // we cache the default links to avoid fetching them every time
-            if (this.defaultLinks) {
-                return this.defaultLinks;
-            }
-
-            const posts = await this.store.query('post', {filter: 'status:published', fields: 'id,url,title,visibility,published_at', order: 'published_at desc', limit: 5});
-            // NOTE: these posts are Ember Data models, not plain objects like the search results
-            const results = posts.toArray().map(post => ({
-                groupName: 'Latest posts',
-                id: post.id,
-                title: post.title,
-                url: post.url,
-                visibility: post.visibility,
-                publishedAt: post.publishedAtUTC.toISOString()
-            })).map(post => decoratePostSearchResult(post, this.settings));
-
-            this.defaultLinks = [{
-                label: 'Latest posts',
-                items: results
-            }];
-            return this.defaultLinks;
+            return await this.fetchDefaultLinks();
         }
 
         let results = [];
