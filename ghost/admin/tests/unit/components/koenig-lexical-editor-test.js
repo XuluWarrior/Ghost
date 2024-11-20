@@ -75,15 +75,13 @@ describe('Unit: Component: koenig-lexical-editor', function () {
 
         beforeEach(function () {
             context = {
-                fetchOffersTask: {
-                    perform: () => {}
-                },
+                fetchOffers: () => {},
                 config: {
                     getSiteUrl: code => `https://example.com?offer=${code}`
                 }
             };
 
-            performStub = sinon.stub(context.fetchOffersTask, 'perform');
+            performStub = sinon.stub(context, 'fetchOffers');
         });
 
         afterEach(function () {

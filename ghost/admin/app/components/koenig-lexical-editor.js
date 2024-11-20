@@ -5,7 +5,7 @@ import fetch from 'fetch';
 import ghostPaths from 'ghost-admin/utils/ghost-paths';
 import moment from 'moment-timezone';
 import {action} from '@ember/object';
-import {didCancel, task} from 'ember-concurrency';
+import {didCancel} from 'ember-concurrency';
 import {inject} from 'ghost-admin/decorators/inject';
 import {inject as service} from '@ember/service';
 
@@ -93,7 +93,7 @@ export function decoratePostSearchResult(item, settings) {
  */
 export async function offerUrls() {
     try {
-        const offers = await this.fetchOffersTask.perform()
+        const offers = await this.fetchOffers();
         return offers.map((offer) => {
             return {
                 label: `Offer — ${offer.name}`,
@@ -234,22 +234,20 @@ export default class KoenigLexicalEditor extends Component {
         // don't rethrow, Lexical will attempt to gracefully recover
     }
 
-    @task({restartable: false})
-    *fetchOffersTask() {
+    async fetchOffers() {
         if (this.offers) {
             return this.offers;
         }
-        this.offers = yield this.store.query('offer', {limit: 'all', filter: 'status:active'});
+        this.offers = await this.store.query('offer', {limit: 'all', filter: 'status:active'});
         return this.offers;
     }
 
-    @task({restartable: false})
-    *fetchLabelsTask() {
+    async fetchLabels() {
         if (this.labels) {
             return this.labels;
         }
 
-        this.labels = yield this.store.query('label', {limit: 'all', fields: 'id, name'});
+        this.labels = await this.store.query('label', {limit: 'all', fields: 'id, name'});
         return this.labels;
     }
 
@@ -326,7 +324,7 @@ export default class KoenigLexicalEditor extends Component {
         const fetchLabels = async () => {
             let labels = [];
             try {
-                labels = await this.fetchLabelsTask.perform();
+                labels = await this.fetchLabels();
             } catch (e) {
                 // Do not throw cancellation errors
                 if (didCancel(e)) {
