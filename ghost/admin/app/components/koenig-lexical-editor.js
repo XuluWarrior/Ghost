@@ -70,15 +70,19 @@ export function decoratePostSearchResult(item, settings) {
     item.metaText = date;
 
     if (settings.membersEnabled && item.visibility) {
-        if (item.visibility === 'members') {
+        switch (item.visibility) {
+        case 'members':
             item.MetaIcon = LockIcon;
             item.metaIconTitle = 'Members only';
-        } else if (item.visibility === 'paid') {
+            break;
+        case 'paid':
             item.MetaIcon = DollarIcon;
             item.metaIconTitle = 'Paid-members only';
-        } else if (item.visibility === 'tiers') {
+            break;
+        case 'tiers':
             item.MetaIcon = DollarIcon;
             item.metaIconTitle = 'Specific tiers only';
+            break;
         }
     }
 }
