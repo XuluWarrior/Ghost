@@ -92,21 +92,18 @@ export function decoratePostSearchResult(item, settings) {
  * @returns {Promise<{label: string, value: string}[]>}
  */
 export async function offerUrls() {
-    let offers = [];
-
     try {
-        offers = await this.fetchOffersTask.perform();
+        const offers = await this.fetchOffersTask.perform()
+        return offers.map((offer) => {
+            return {
+                label: `Offer — ${offer.name}`,
+                value: this.config.getSiteUrl(offer.code)
+            };
+        });
     } catch (e) {
         // No-op: if offers are not available (e.g. missing permissions), return an empty array
         return [];
     }
-
-    return offers.map((offer) => {
-        return {
-            label: `Offer — ${offer.name}`,
-            value: this.config.getSiteUrl(offer.code)
-        };
-    });
 }
 
 class ErrorHandler extends React.Component {
