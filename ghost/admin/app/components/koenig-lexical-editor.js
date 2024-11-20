@@ -251,7 +251,7 @@ export default class KoenigLexicalEditor extends Component {
         if (!this.labels) {
             this.labels = await this.store.query('label', {limit: 'all', fields: 'id, name'});
         }
-        return this.labels;
+        return this.labels.map(label => label.name);
     }
 
     @action
@@ -394,12 +394,7 @@ export default class KoenigLexicalEditor extends Component {
     }
 
     ReactComponent = (props) => {
-        const {fetchEmbed, fetchCollectionPosts, fetchAutocompleteLinks, searchLinks} = this;
-
-        const fetchLabels = async () => {
-            const labels = await this.fetchLabels();
-            return labels.map(label => label.name);
-        };
+        const {fetchEmbed, fetchCollectionPosts, fetchAutocompleteLinks, fetchLabels, searchLinks} = this;
 
         const unsplashConfig = {
             defaultHeaders: {
