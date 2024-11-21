@@ -251,146 +251,150 @@ export default class KoenigLexicalEditor extends Component {
         if (!this.labels) {
             this.labels = await this.store.query('label', {limit: 'all', fields: 'id, name'});
         }
-        return this.labels;
+        return this.labels.map(label => label.name);
     }
 
-    ReactComponent = (props) => {
-        const fetchEmbed = async (url, {type}) => {
-            let oembedEndpoint = this.ghostPaths.url.api('oembed');
-            let response = await this.ajax.request(oembedEndpoint, {
-                data: {url, type}
-            });
-            return response;
-        };
+    @action
+    async fetchEmbed(url, {type}) {
+        let oembedEndpoint = this.ghostPaths.url.api('oembed');
+        let response = await this.ajax.request(oembedEndpoint, {
+            data: {url, type}
+        });
+        return response;
+    }
 
-        const fetchCollectionPosts = async (collectionSlug) => {
-            if (!this.contentKey) {
-                const integrations = await this.store.findAll('integration');
-                const contentIntegration = integrations.findBy('slug', 'ghost-core-content');
-                this.contentKey = contentIntegration?.contentKey.secret;
-            }
+    @action
+    async fetchCollectionPosts(collectionSlug) {
+        if (!this.contentKey) {
+            const integrations = await this.store.findAll('integration');
+            const contentIntegration = integrations.findBy('slug', 'ghost-core-content');
+            this.contentKey = contentIntegration?.contentKey.secret;
+        }
 
-            const postsUrl = new URL(this.ghostPaths.url.admin('/api/content/posts/'), window.location.origin);
-            postsUrl.searchParams.append('key', this.contentKey);
-            postsUrl.searchParams.append('collection', collectionSlug);
-            postsUrl.searchParams.append('limit', 12);
+        const postsUrl = new URL(this.ghostPaths.url.admin('/api/content/posts/'), window.location.origin);
+        postsUrl.searchParams.append('key', this.contentKey);
+        postsUrl.searchParams.append('collection', collectionSlug);
+        postsUrl.searchParams.append('limit', 12);
 
-            const response = await fetch(postsUrl.toString());
-            const {posts} = await response.json();
+        const response = await fetch(postsUrl.toString());
+        const {posts} = await response.json();
 
-            return posts;
-        };
+        return posts;
+    }
 
-        const fetchAutocompleteLinks = async () => {
-            const defaults = [
-                {label: 'Homepage', value: window.location.origin + '/'},
-                {label: 'Free signup', value: '#/portal/signup/free'}
-            ];
+    @action
+    async fetchAutocompleteLinks() {
+        const defaults = [
+            {label: 'Homepage', value: window.location.origin + '/'},
+            {label: 'Free signup', value: '#/portal/signup/free'}
+        ];
 
-            const memberLinks = () => {
-                return this.membersUtils.paidMembersEnabled
-                    ? [
-                        {
-                            label: 'Paid signup',
-                            value: '#/portal/signup'
-                        },
-                        {
-                            label: 'Upgrade or change plan',
-                            value: '#/portal/account/plans'
-                        }]
-                    : [];
-            };
+        const memberLinks = this.membersUtils.paidMembersEnabled
+            ? [
+                {
+                    label: 'Paid signup',
+                    value: '#/portal/signup'
+                },
+                {
+                    label: 'Upgrade or change plan',
+                    value: '#/portal/account/plans'
+                }]
+            : [];
 
-            const donationLink = () => {
-                return this.settings.donationsEnabled
-                    ? [{
-                        label: 'Tips and donations',
-                        value: '#/portal/support'
-                    }]
-                    : [];
-            };
+        const donationLink = this.settings.donationsEnabled
+            ? [{
+                label: 'Tips and donations',
+                value: '#/portal/support'
+            }]
+            : [];
 
-            const recommendationLink = () => {
-                return this.settings.recommendationsEnabled
-                    ? [{
-                        label: 'Recommendations',
-                        value: '#/portal/recommendations'
-                    }]
-                    : [];
-            };
+        const recommendationLink = this.settings.recommendationsEnabled
+            ? [{
+                label: 'Recommendations',
+                value: '#/portal/recommendations'
+            }]
+            : [];
 
-            const offersLinks = await offerUrls.call(this);
+        const offersLinks = await offerUrls.call(this);
 
-            return [...defaults, ...memberLinks(), ...donationLink(), ...recommendationLink(), ...offersLinks];
-        };
+        return [...defaults, ...memberLinks, ...donationLink, ...recommendationLink, ...offersLinks];
+    }
 
-        const fetchLabels = async () => {
-            const labels = await this.fetchLabels();
-            return labels.map(label => label.name);
-        };
-
-        const searchLinks = async (term) => {
-            // when no term is present we should show latest 5 posts
-            if (!term) {
-                // we cache the default links to avoid fetching them every time
-                if (this.defaultLinks) {
-                    return this.defaultLinks;
-                }
-
-                const posts = await this.store.query('post', {filter: 'status:published', fields: 'id,url,title,visibility,published_at', order: 'published_at desc', limit: 5});
-                // NOTE: these posts are Ember Data models, not plain objects like the search results
-                const results = posts.toArray().map(post => ({
-                    groupName: 'Latest posts',
-                    id: post.id,
-                    title: post.title,
-                    url: post.url,
-                    visibility: post.visibility,
-                    publishedAt: post.publishedAtUTC.toISOString()
-                })).map(post => decoratePostSearchResult(post, this.settings));
-
-                this.defaultLinks = [{
-                    label: 'Latest posts',
-                    items: results
-                }];
+    @action
+    async searchLinks(term) {
+        // when no term is present we should show latest 5 posts
+        if (!term) {
+            // we cache the default links to avoid fetching them every time
+            if (this.defaultLinks) {
                 return this.defaultLinks;
             }
 
-            let results = [];
+            const posts = await this.store.query('post', {filter: 'status:published', fields: 'id,url,title,visibility,published_at', order: 'published_at desc', limit: 5});
+            // NOTE: these posts are Ember Data models, not plain objects like the search results
+            const results = posts.toArray().map(post => ({
+                groupName: 'Latest posts',
+                id: post.id,
+                title: post.title,
+                url: post.url,
+                visibility: post.visibility,
+                publishedAt: post.publishedAtUTC.toISOString()
+            })).map(post => decoratePostSearchResult(post, this.settings));
 
-            try {
-                results = await this.search.searchTask.perform(term);
-            } catch (error) {
-                // don't surface task cancellation errors
-                if (!didCancel(error)) {
-                    throw error;
-                }
-                return;
+            this.defaultLinks = [{
+                label: 'Latest posts',
+                items: results
+            }];
+            return this.defaultLinks;
+        }
+
+        let results = [];
+
+        try {
+            results = await this.search.searchTask.perform(term);
+        } catch (error) {
+            // don't surface task cancellation errors
+            if (!didCancel(error)) {
+                throw error;
+            }
+            return;
+        }
+
+        // only published posts/pages and staff with posts have URLs
+        const filteredResults = results.map((group) => {
+            let items = group.options;
+
+            if (group.groupName === 'Posts' || group.groupName === 'Pages') {
+                items = items.filter(i => i.status === 'published');
             }
 
-            // only published posts/pages and staff with posts have URLs
-            const filteredResults = results.map((group) => {
-                let items = group.options;
+            if (group.groupName === 'Staff') {
+                items = items.filter(i => !/\/404\//.test(i.url));
+            }
 
-                if (group.groupName === 'Posts' || group.groupName === 'Pages') {
-                    items = items.filter(i => i.status === 'published');
-                }
+            // update the group items with metadata
+            if (group.groupName === 'Posts' || group.groupName === 'Pages') {
+                items = items.map(item => decoratePostSearchResult(item, this.settings));
+            }
 
-                if (group.groupName === 'Staff') {
-                    items = items.filter(i => !/\/404\//.test(i.url));
-                }
+            return {
+                label: group.groupName,
+                items
+            };
+        }).filter(({items}) => items.length > 0);
+        return filteredResults;
+    }
 
-                // update the group items with metadata
-                if (group.groupName === 'Posts' || group.groupName === 'Pages') {
-                    items = items.map(item => decoratePostSearchResult(item, this.settings));
-                }
+    get stripeEnabled() {
+        const hasDirectKeys = !!(this.settings.stripeSecretKey && this.settings.stripePublishableKey);
+        const hasConnectKeys = !!(this.settings.stripeConnectSecretKey && this.settings.stripeConnectPublishableKey);
 
-                return {
-                    label: group.groupName,
-                    items
-                };
-            }).filter(({items}) => items.length > 0);
-            return filteredResults;
-        };
+        return this.config.stripeDirect
+            ? hasDirectKeys
+            : hasDirectKeys || hasConnectKeys;
+    }
+
+    ReactComponent = (props) => {
+        const {fetchEmbed, fetchCollectionPosts, fetchAutocompleteLinks, fetchLabels, searchLinks, stripeEnabled} = this;
 
         const unsplashConfig = {
             defaultHeaders: {
@@ -400,15 +404,6 @@ export default class KoenigLexicalEditor extends Component {
                 'App-Pragma': 'no-cache',
                 'X-Unsplash-Cache': true
             }
-        };
-
-        const checkStripeEnabled = () => {
-            const hasDirectKeys = !!(this.settings.stripeSecretKey && this.settings.stripePublishableKey);
-            const hasConnectKeys = !!(this.settings.stripeConnectSecretKey && this.settings.stripeConnectPublishableKey);
-
-            return this.config.stripeDirect
-                ? hasDirectKeys
-                : hasDirectKeys || hasConnectKeys;
         };
 
         const defaultCardConfig = {
@@ -432,7 +427,7 @@ export default class KoenigLexicalEditor extends Component {
             siteTitle: this.settings.title,
             siteDescription: this.settings.description,
             siteUrl: this.config.getSiteUrl('/'),
-            stripeEnabled: checkStripeEnabled() // returns a boolean
+            stripeEnabled // returns a boolean
         };
         const cardConfig = {...defaultCardConfig, ...props.cardConfig, pinturaConfig: this.pinturaConfig};
 
