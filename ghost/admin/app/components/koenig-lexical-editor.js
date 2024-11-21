@@ -5,7 +5,7 @@ import fetch from 'fetch';
 import ghostPaths from 'ghost-admin/utils/ghost-paths';
 import moment from 'moment-timezone';
 import {action} from '@ember/object';
-import {didCancel, task} from 'ember-concurrency';
+import {didCancel} from 'ember-concurrency';
 import {inject} from 'ghost-admin/decorators/inject';
 import {inject as service} from '@ember/service';
 
@@ -92,21 +92,18 @@ export function decoratePostSearchResult(item, settings) {
  * @returns {Promise<{label: string, value: string}[]>}
  */
 export async function offerUrls() {
-    let offers = [];
-
     try {
-        offers = await this.fetchOffersTask.perform();
+        const offers = await this.fetchOffers();
+        return offers.map((offer) => {
+            return {
+                label: `Offer — ${offer.name}`,
+                value: this.config.getSiteUrl(offer.code)
+            };
+        });
     } catch (e) {
         // No-op: if offers are not available (e.g. missing permissions), return an empty array
         return [];
     }
-
-    return offers.map((offer) => {
-        return {
-            label: `Offer — ${offer.name}`,
-            value: this.config.getSiteUrl(offer.code)
-        };
-    });
 }
 
 class ErrorHandler extends React.Component {
@@ -237,22 +234,17 @@ export default class KoenigLexicalEditor extends Component {
         // don't rethrow, Lexical will attempt to gracefully recover
     }
 
-    @task({restartable: false})
-    *fetchOffersTask() {
-        if (this.offers) {
-            return this.offers;
+    async fetchOffers() {
+        if (!this.offers) {
+            this.offers = await this.store.query('offer', {limit: 'all', filter: 'status:active'});
         }
-        this.offers = yield this.store.query('offer', {limit: 'all', filter: 'status:active'});
         return this.offers;
     }
 
-    @task({restartable: false})
-    *fetchLabelsTask() {
-        if (this.labels) {
-            return this.labels;
+    async fetchLabels() {
+        if (!this.labels) {
+            this.labels = await this.store.query('label', {limit: 'all', fields: 'id, name'});
         }
-
-        this.labels = yield this.store.query('label', {limit: 'all', fields: 'id, name'});
         return this.labels;
     }
 
@@ -327,18 +319,7 @@ export default class KoenigLexicalEditor extends Component {
         };
 
         const fetchLabels = async () => {
-            let labels = [];
-            try {
-                labels = await this.fetchLabelsTask.perform();
-            } catch (e) {
-                // Do not throw cancellation errors
-                if (didCancel(e)) {
-                    return;
-                }
-
-                throw e;
-            }
-
+            const labels = await this.fetchLabels();
             return labels.map(label => label.name);
         };
 
