@@ -43,7 +43,7 @@ export function useFileUpload(ajax, type = 'image') {
         }
 
         if (!extension || extensions.indexOf(extension.toLowerCase()) === -1) {
-            let validExtensions = `.${extensions.join(', .').toUpperCase()}`;
+            const validExtensions = `.${extensions.join(', .').toUpperCase()}`;
             return `The file type you uploaded is not supported. Please use ${validExtensions}`;
         }
 
