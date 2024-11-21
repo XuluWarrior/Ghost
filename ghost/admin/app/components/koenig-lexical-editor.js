@@ -67,24 +67,30 @@ function DollarIcon({...props}) {
 export function decoratePostSearchResult(item, settings) {
     const date = moment.utc(item.publishedAt).tz(settings.timezone).format('D MMM YYYY');
 
-    item.metaText = date;
+    const metaData = {
+        metaText: date
+    };
 
     if (settings.membersEnabled && item.visibility) {
         switch (item.visibility) {
         case 'members':
-            item.MetaIcon = LockIcon;
-            item.metaIconTitle = 'Members only';
+            metaData.MetaIcon = LockIcon;
+            metaData.metaIconTitle = 'Members only';
             break;
         case 'paid':
-            item.MetaIcon = DollarIcon;
-            item.metaIconTitle = 'Paid-members only';
+            metaData.MetaIcon = DollarIcon;
+            metaData.metaIconTitle = 'Paid-members only';
             break;
         case 'tiers':
-            item.MetaIcon = DollarIcon;
-            item.metaIconTitle = 'Specific tiers only';
+            metaData.MetaIcon = DollarIcon;
+            metaData.metaIconTitle = 'Specific tiers only';
             break;
         }
     }
+    return {
+        ...item,
+        ...metaData
+    };
 }
 
 /**
@@ -340,9 +346,7 @@ export default class KoenigLexicalEditor extends Component {
                     url: post.url,
                     visibility: post.visibility,
                     publishedAt: post.publishedAtUTC.toISOString()
-                }));
-
-                results.forEach(item => decoratePostSearchResult(item, this.settings));
+                })).map(post => decoratePostSearchResult(post, this.settings));
 
                 this.defaultLinks = [{
                     label: 'Latest posts',
@@ -364,8 +368,7 @@ export default class KoenigLexicalEditor extends Component {
             }
 
             // only published posts/pages and staff with posts have URLs
-            const filteredResults = [];
-            results.forEach((group) => {
+            const filteredResults = results.map((group) => {
                 let items = group.options;
 
                 if (group.groupName === 'Posts' || group.groupName === 'Pages') {
@@ -376,21 +379,16 @@ export default class KoenigLexicalEditor extends Component {
                     items = items.filter(i => !/\/404\//.test(i.url));
                 }
 
-                if (items.length === 0) {
-                    return;
-                }
-
                 // update the group items with metadata
                 if (group.groupName === 'Posts' || group.groupName === 'Pages') {
-                    items.forEach(item => decoratePostSearchResult(item, this.settings));
+                    items = items.map(item => decoratePostSearchResult(item, this.settings));
                 }
 
-                filteredResults.push({
+                return {
                     label: group.groupName,
                     items
-                });
-            });
-
+                };
+            }).filter(({items}) => items.length > 0);
             return filteredResults;
         };
 
@@ -436,7 +434,7 @@ export default class KoenigLexicalEditor extends Component {
             siteUrl: this.config.getSiteUrl('/'),
             stripeEnabled: checkStripeEnabled() // returns a boolean
         };
-        const cardConfig = Object.assign({}, defaultCardConfig, props.cardConfig, {pinturaConfig: this.pinturaConfig});
+        const cardConfig = {...defaultCardConfig, ...props.cardConfig, pinturaConfig: this.pinturaConfig};
 
         const useFileUpload = (type = 'image') => {
             const [progress, setProgress] = React.useState(0);
