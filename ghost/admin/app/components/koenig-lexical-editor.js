@@ -138,22 +138,22 @@ class ErrorHandler extends React.Component {
 }
 
 const KoenigComposer = ({editorResource, ...props}) => {
-    const {KoenigComposer: _KoenigComposer} = editorResource.read();
+    const {KoenigComposer: _KoenigComposer} = editorResource.koenigLexical;
     return <_KoenigComposer {...props} />;
 };
 
 const KoenigEditor = ({editorResource, ...props}) => {
-    const {KoenigEditor: _KoenigEditor} = editorResource.read();
+    const {KoenigEditor: _KoenigEditor} = editorResource.koenigLexical;
     return <_KoenigEditor {...props} />;
 };
 
 const WordCountPlugin = ({editorResource, ...props}) => {
-    const {WordCountPlugin: _WordCountPlugin} = editorResource.read();
+    const {WordCountPlugin: _WordCountPlugin} = editorResource.koenigLexical;
     return <_WordCountPlugin {...props} />;
 };
 
 const TKCountPlugin = ({editorResource, ...props}) => {
-    const {TKCountPlugin: _TKCountPlugin} = editorResource.read();
+    const {TKCountPlugin: _TKCountPlugin} = editorResource.koenigLexical;
     return <_TKCountPlugin {...props} />;
 };
 
@@ -174,7 +174,7 @@ export default class KoenigLexicalEditor extends Component {
     contentKey = null;
     defaultLinks = null;
 
-    editorResource = this.koenig.resource;
+    editorResource = this.koenig;
 
     get pinturaJsUrl() {
         return this.settings.pintura
