@@ -51,17 +51,9 @@ export function useFileUpload(ajax, type = 'image') {
     }
 
     const validate = (files = []) => {
-        const validationResult = [];
-
-        for (let i = 0; i < files.length; i += 1) {
-            let file = files[i];
-            let result = defaultValidator(file);
-            if (result === true) {
-                continue;
-            }
-
-            validationResult.push({fileName: file.name, message: result});
-        }
+        const validationResult = files
+            .map(file => ({fileName: file.name, message: defaultValidator(file)}))
+            .filter(({message}) => message);
 
         return validationResult;
     };
