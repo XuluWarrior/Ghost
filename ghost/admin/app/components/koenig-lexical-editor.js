@@ -393,9 +393,7 @@ export default class KoenigLexicalEditor extends Component {
             : hasDirectKeys || hasConnectKeys;
     }
 
-    ReactComponent = (props) => {
-        const {fetchEmbed, fetchCollectionPosts, fetchAutocompleteLinks, fetchLabels, searchLinks, stripeEnabled} = this;
-
+    get defaultCardConfig() {
         const unsplashConfig = {
             defaultHeaders: {
                 Authorization: `Client-ID 8672af113b0a8573edae3aa3713886265d9bb741d707f6c01a486cde8c278980`,
@@ -406,7 +404,8 @@ export default class KoenigLexicalEditor extends Component {
             }
         };
 
-        const defaultCardConfig = {
+        const {fetchEmbed, fetchCollectionPosts, fetchAutocompleteLinks, fetchLabels, searchLinks, stripeEnabled} = this;
+        return {
             unsplash: this.settings.unsplash ? unsplashConfig.defaultHeaders : null,
             tenor: this.config.tenor?.googleApiKey ? this.config.tenor : null,
             fetchAutocompleteLinks,
@@ -429,7 +428,10 @@ export default class KoenigLexicalEditor extends Component {
             siteUrl: this.config.getSiteUrl('/'),
             stripeEnabled // returns a boolean
         };
-        const cardConfig = {...defaultCardConfig, ...props.cardConfig, pinturaConfig: this.pinturaConfig};
+    }
+
+    ReactComponent = (props) => {
+        const cardConfig = {...this.defaultCardConfig, ...props.cardConfig, pinturaConfig: this.pinturaConfig};
 
         const useFileUpload = (type = 'image') => _useFileUpload(this.ajax, type);
 
