@@ -2,10 +2,10 @@ import * as Sentry from '@sentry/ember';
 import Component from '@glimmer/component';
 import React, {Suspense} from 'react';
 import fetch from 'fetch';
-import ghostPaths from 'ghost-admin/utils/ghost-paths';
 import moment from 'moment-timezone';
+import {useFileUpload as _useFileUpload} from '../hooks/use-file-upload';
 import {action} from '@ember/object';
-import {didCancel, task} from 'ember-concurrency';
+import {didCancel} from 'ember-concurrency';
 import {inject} from 'ghost-admin/decorators/inject';
 import {inject as service} from '@ember/service';
 
@@ -67,20 +67,30 @@ function DollarIcon({...props}) {
 export function decoratePostSearchResult(item, settings) {
     const date = moment.utc(item.publishedAt).tz(settings.timezone).format('D MMM YYYY');
 
-    item.metaText = date;
+    const metaData = {
+        metaText: date
+    };
 
     if (settings.membersEnabled && item.visibility) {
-        if (item.visibility === 'members') {
-            item.MetaIcon = LockIcon;
-            item.metaIconTitle = 'Members only';
-        } else if (item.visibility === 'paid') {
-            item.MetaIcon = DollarIcon;
-            item.metaIconTitle = 'Paid-members only';
-        } else if (item.visibility === 'tiers') {
-            item.MetaIcon = DollarIcon;
-            item.metaIconTitle = 'Specific tiers only';
+        switch (item.visibility) {
+        case 'members':
+            metaData.MetaIcon = LockIcon;
+            metaData.metaIconTitle = 'Members only';
+            break;
+        case 'paid':
+            metaData.MetaIcon = DollarIcon;
+            metaData.metaIconTitle = 'Paid-members only';
+            break;
+        case 'tiers':
+            metaData.MetaIcon = DollarIcon;
+            metaData.metaIconTitle = 'Specific tiers only';
+            break;
         }
     }
+    return {
+        ...item,
+        ...metaData
+    };
 }
 
 /**
@@ -88,21 +98,18 @@ export function decoratePostSearchResult(item, settings) {
  * @returns {Promise<{label: string, value: string}[]>}
  */
 export async function offerUrls() {
-    let offers = [];
-
     try {
-        offers = await this.fetchOffersTask.perform();
+        const offers = await this.fetchOffers();
+        return offers.map((offer) => {
+            return {
+                label: `Offer — ${offer.name}`,
+                value: this.config.getSiteUrl(offer.code)
+            };
+        });
     } catch (e) {
         // No-op: if offers are not available (e.g. missing permissions), return an empty array
         return [];
     }
-
-    return offers.map((offer) => {
-        return {
-            label: `Offer — ${offer.name}`,
-            value: this.config.getSiteUrl(offer.code)
-        };
-    });
 }
 
 class ErrorHandler extends React.Component {
@@ -127,33 +134,29 @@ class ErrorHandler extends React.Component {
     }
 
     render() {
-        if (this.state.hasError) {
-            return (
-                <p className="koenig-react-editor-error">Loading has failed. Try refreshing the browser!</p>
-            );
-        }
-
-        return this.props.children;
+        return this.state.hasError
+            ? <p className="koenig-react-editor-error">Loading has failed. Try refreshing the browser!</p>
+            : this.props.children;
     }
 }
 
 const KoenigComposer = ({editorResource, ...props}) => {
-    const {KoenigComposer: _KoenigComposer} = editorResource.read();
+    const {KoenigComposer: _KoenigComposer} = editorResource.koenigLexical;
     return <_KoenigComposer {...props} />;
 };
 
 const KoenigEditor = ({editorResource, ...props}) => {
-    const {KoenigEditor: _KoenigEditor} = editorResource.read();
+    const {KoenigEditor: _KoenigEditor} = editorResource.koenigLexical;
     return <_KoenigEditor {...props} />;
 };
 
 const WordCountPlugin = ({editorResource, ...props}) => {
-    const {WordCountPlugin: _WordCountPlugin} = editorResource.read();
+    const {WordCountPlugin: _WordCountPlugin} = editorResource.koenigLexical;
     return <_WordCountPlugin {...props} />;
 };
 
 const TKCountPlugin = ({editorResource, ...props}) => {
-    const {TKCountPlugin: _TKCountPlugin} = editorResource.read();
+    const {TKCountPlugin: _TKCountPlugin} = editorResource.koenigLexical;
     return <_TKCountPlugin {...props} />;
 };
 
@@ -174,43 +177,36 @@ export default class KoenigLexicalEditor extends Component {
     contentKey = null;
     defaultLinks = null;
 
-    editorResource = this.koenig.resource;
+    editorResource = this.koenig;
 
     get pinturaJsUrl() {
-        if (!this.settings.pintura) {
-            return null;
-        }
-        return this.config.pintura?.js || this.settings.pinturaJsUrl;
+        return this.settings.pintura
+            ? this.config.pintura?.js || this.settings.pinturaJsUrl
+            : null;
     }
 
     get pinturaCSSUrl() {
-        if (!this.settings.pintura) {
-            return null;
-        }
-        return this.config.pintura?.css || this.settings.pinturaCssUrl;
+        return this.settings.pintura
+            ? this.config.pintura?.css || this.settings.pinturaCssUrl
+            : null;
     }
 
     get pinturaConfig() {
         const jsUrl = this.getImageEditorJSUrl();
         const cssUrl = this.getImageEditorCSSUrl();
-        if (!jsUrl || !cssUrl) {
-            return null;
-        }
-        return {
-            jsUrl,
-            cssUrl
-        };
+        return (jsUrl && cssUrl)
+            ? {
+                jsUrl,
+                cssUrl
+            }
+            : null;
     }
 
     getImageEditorJSUrl() {
         let importUrl = this.pinturaJsUrl;
 
-        if (!importUrl) {
-            return null;
-        }
-
         // load the script from admin root if relative
-        if (importUrl.startsWith('/')) {
+        if (importUrl?.startsWith('/')) {
             importUrl = window.location.origin + this.ghostPaths.adminRoot.replace(/\/$/, '') + importUrl;
         }
         return importUrl;
@@ -219,12 +215,8 @@ export default class KoenigLexicalEditor extends Component {
     getImageEditorCSSUrl() {
         let cssImportUrl = this.pinturaCSSUrl;
 
-        if (!cssImportUrl) {
-            return null;
-        }
-
         // load the css from admin root if relative
-        if (cssImportUrl.startsWith('/')) {
+        if (cssImportUrl?.startsWith('/')) {
             cssImportUrl = window.location.origin + this.ghostPaths.adminRoot.replace(/\/$/, '') + cssImportUrl;
         }
         return cssImportUrl;
@@ -248,189 +240,162 @@ export default class KoenigLexicalEditor extends Component {
         // don't rethrow, Lexical will attempt to gracefully recover
     }
 
-    @task({restartable: false})
-    *fetchOffersTask() {
-        if (this.offers) {
-            return this.offers;
+    async fetchOffers() {
+        if (!this.offers) {
+            this.offers = await this.store.query('offer', {limit: 'all', filter: 'status:active'});
         }
-        this.offers = yield this.store.query('offer', {limit: 'all', filter: 'status:active'});
         return this.offers;
     }
 
-    @task({restartable: false})
-    *fetchLabelsTask() {
-        if (this.labels) {
-            return this.labels;
+    async fetchLabels() {
+        if (!this.labels) {
+            this.labels = await this.store.query('label', {limit: 'all', fields: 'id, name'});
         }
-
-        this.labels = yield this.store.query('label', {limit: 'all', fields: 'id, name'});
-        return this.labels;
+        return this.labels.map(label => label.name);
     }
 
-    ReactComponent = (props) => {
-        const fetchEmbed = async (url, {type}) => {
-            let oembedEndpoint = this.ghostPaths.url.api('oembed');
-            let response = await this.ajax.request(oembedEndpoint, {
-                data: {url, type}
-            });
-            return response;
-        };
+    @action
+    async fetchEmbed(url, {type}) {
+        let oembedEndpoint = this.ghostPaths.url.api('oembed');
+        let response = await this.ajax.request(oembedEndpoint, {
+            data: {url, type}
+        });
+        return response;
+    }
 
-        const fetchCollectionPosts = async (collectionSlug) => {
-            if (!this.contentKey) {
-                const integrations = await this.store.findAll('integration');
-                const contentIntegration = integrations.findBy('slug', 'ghost-core-content');
-                this.contentKey = contentIntegration?.contentKey.secret;
+    @action
+    async fetchCollectionPosts(collectionSlug) {
+        if (!this.contentKey) {
+            const integrations = await this.store.findAll('integration');
+            const contentIntegration = integrations.findBy('slug', 'ghost-core-content');
+            this.contentKey = contentIntegration?.contentKey.secret;
+        }
+
+        const postsUrl = new URL(this.ghostPaths.url.admin('/api/content/posts/'), window.location.origin);
+        postsUrl.searchParams.append('key', this.contentKey);
+        postsUrl.searchParams.append('collection', collectionSlug);
+        postsUrl.searchParams.append('limit', 12);
+
+        const response = await fetch(postsUrl.toString());
+        const {posts} = await response.json();
+
+        return posts;
+    }
+
+    @action
+    async fetchAutocompleteLinks() {
+        const defaults = [
+            {label: 'Homepage', value: window.location.origin + '/'},
+            {label: 'Free signup', value: '#/portal/signup/free'}
+        ];
+
+        const memberLinks = this.membersUtils.paidMembersEnabled
+            ? [
+                {
+                    label: 'Paid signup',
+                    value: '#/portal/signup'
+                },
+                {
+                    label: 'Upgrade or change plan',
+                    value: '#/portal/account/plans'
+                }]
+            : [];
+
+        const donationLink = this.settings.donationsEnabled
+            ? [{
+                label: 'Tips and donations',
+                value: '#/portal/support'
+            }]
+            : [];
+
+        const recommendationLink = this.settings.recommendationsEnabled
+            ? [{
+                label: 'Recommendations',
+                value: '#/portal/recommendations'
+            }]
+            : [];
+
+        const offersLinks = await offerUrls.call(this);
+
+        return [...defaults, ...memberLinks, ...donationLink, ...recommendationLink, ...offersLinks];
+    }
+
+    async fetchDefaultLinks() {
+        // we cache the default links to avoid fetching them every time
+        if (!this.defaultLinks) {
+            const posts = await this.store.query('post', {filter: 'status:published', fields: 'id,url,title,visibility,published_at', order: 'published_at desc', limit: 5});
+            // NOTE: these posts are Ember Data models, not plain objects like the search results
+            const results = posts.toArray().map(post => ({
+                groupName: 'Latest posts',
+                id: post.id,
+                title: post.title,
+                url: post.url,
+                visibility: post.visibility,
+                publishedAt: post.publishedAtUTC.toISOString()
+            })).map(post => decoratePostSearchResult(post, this.settings));
+
+            this.defaultLinks = [{
+                label: 'Latest posts',
+                items: results
+            }];
+        }
+        return this.defaultLinks;
+    }
+
+    @action
+    async searchLinks(term) {
+        // when no term is present we should show latest 5 posts
+        if (!term) {
+            return await this.fetchDefaultLinks();
+        }
+
+        let results = [];
+
+        try {
+            results = await this.search.searchTask.perform(term);
+        } catch (error) {
+            // don't surface task cancellation errors
+            if (!didCancel(error)) {
+                throw error;
+            }
+            return;
+        }
+
+        // only published posts/pages and staff with posts have URLs
+        const filteredResults = results.map((group) => {
+            let items = group.options;
+
+            if (group.groupName === 'Posts' || group.groupName === 'Pages') {
+                items = items.filter(i => i.status === 'published');
             }
 
-            const postsUrl = new URL(this.ghostPaths.url.admin('/api/content/posts/'), window.location.origin);
-            postsUrl.searchParams.append('key', this.contentKey);
-            postsUrl.searchParams.append('collection', collectionSlug);
-            postsUrl.searchParams.append('limit', 12);
+            if (group.groupName === 'Staff') {
+                items = items.filter(i => !/\/404\//.test(i.url));
+            }
 
-            const response = await fetch(postsUrl.toString());
-            const {posts} = await response.json();
+            // update the group items with metadata
+            if (group.groupName === 'Posts' || group.groupName === 'Pages') {
+                items = items.map(item => decoratePostSearchResult(item, this.settings));
+            }
 
-            return posts;
-        };
-
-        const fetchAutocompleteLinks = async () => {
-            const defaults = [
-                {label: 'Homepage', value: window.location.origin + '/'},
-                {label: 'Free signup', value: '#/portal/signup/free'}
-            ];
-
-            const memberLinks = () => {
-                let links = [];
-                if (this.membersUtils.paidMembersEnabled) {
-                    links = [
-                        {
-                            label: 'Paid signup',
-                            value: '#/portal/signup'
-                        },
-                        {
-                            label: 'Upgrade or change plan',
-                            value: '#/portal/account/plans'
-                        }];
-                }
-
-                return links;
+            return {
+                label: group.groupName,
+                items
             };
+        }).filter(({items}) => items.length > 0);
+        return filteredResults;
+    }
 
-            const donationLink = () => {
-                if (this.settings.donationsEnabled) {
-                    return [{
-                        label: 'Tips and donations',
-                        value: '#/portal/support'
-                    }];
-                }
+    get stripeEnabled() {
+        const hasDirectKeys = !!(this.settings.stripeSecretKey && this.settings.stripePublishableKey);
+        const hasConnectKeys = !!(this.settings.stripeConnectSecretKey && this.settings.stripeConnectPublishableKey);
 
-                return [];
-            };
+        return this.config.stripeDirect
+            ? hasDirectKeys
+            : hasDirectKeys || hasConnectKeys;
+    }
 
-            const recommendationLink = () => {
-                if (this.settings.recommendationsEnabled) {
-                    return [{
-                        label: 'Recommendations',
-                        value: '#/portal/recommendations'
-                    }];
-                }
-
-                return [];
-            };
-
-            const offersLinks = await offerUrls.call(this);
-
-            return [...defaults, ...memberLinks(), ...donationLink(), ...recommendationLink(), ...offersLinks];
-        };
-
-        const fetchLabels = async () => {
-            let labels = [];
-            try {
-                labels = await this.fetchLabelsTask.perform();
-            } catch (e) {
-                // Do not throw cancellation errors
-                if (didCancel(e)) {
-                    return;
-                }
-
-                throw e;
-            }
-
-            return labels.map(label => label.name);
-        };
-
-        const searchLinks = async (term) => {
-            // when no term is present we should show latest 5 posts
-            if (!term) {
-                // we cache the default links to avoid fetching them every time
-                if (this.defaultLinks) {
-                    return this.defaultLinks;
-                }
-
-                const posts = await this.store.query('post', {filter: 'status:published', fields: 'id,url,title,visibility,published_at', order: 'published_at desc', limit: 5});
-                // NOTE: these posts are Ember Data models, not plain objects like the search results
-                const results = posts.toArray().map(post => ({
-                    groupName: 'Latest posts',
-                    id: post.id,
-                    title: post.title,
-                    url: post.url,
-                    visibility: post.visibility,
-                    publishedAt: post.publishedAtUTC.toISOString()
-                }));
-
-                results.forEach(item => decoratePostSearchResult(item, this.settings));
-
-                this.defaultLinks = [{
-                    label: 'Latest posts',
-                    items: results
-                }];
-                return this.defaultLinks;
-            }
-
-            let results = [];
-
-            try {
-                results = await this.search.searchTask.perform(term);
-            } catch (error) {
-                // don't surface task cancellation errors
-                if (!didCancel(error)) {
-                    throw error;
-                }
-                return;
-            }
-
-            // only published posts/pages and staff with posts have URLs
-            const filteredResults = [];
-            results.forEach((group) => {
-                let items = group.options;
-
-                if (group.groupName === 'Posts' || group.groupName === 'Pages') {
-                    items = items.filter(i => i.status === 'published');
-                }
-
-                if (group.groupName === 'Staff') {
-                    items = items.filter(i => !/\/404\//.test(i.url));
-                }
-
-                if (items.length === 0) {
-                    return;
-                }
-
-                // update the group items with metadata
-                if (group.groupName === 'Posts' || group.groupName === 'Pages') {
-                    items.forEach(item => decoratePostSearchResult(item, this.settings));
-                }
-
-                filteredResults.push({
-                    label: group.groupName,
-                    items
-                });
-            });
-
-            return filteredResults;
-        };
-
+    get defaultCardConfig() {
         const unsplashConfig = {
             defaultHeaders: {
                 Authorization: `Client-ID 8672af113b0a8573edae3aa3713886265d9bb741d707f6c01a486cde8c278980`,
@@ -441,17 +406,8 @@ export default class KoenigLexicalEditor extends Component {
             }
         };
 
-        const checkStripeEnabled = () => {
-            const hasDirectKeys = !!(this.settings.stripeSecretKey && this.settings.stripePublishableKey);
-            const hasConnectKeys = !!(this.settings.stripeConnectSecretKey && this.settings.stripeConnectPublishableKey);
-
-            if (this.config.stripeDirect) {
-                return hasDirectKeys;
-            }
-            return hasDirectKeys || hasConnectKeys;
-        };
-
-        const defaultCardConfig = {
+        const {fetchEmbed, fetchCollectionPosts, fetchAutocompleteLinks, fetchLabels, searchLinks, stripeEnabled} = this;
+        return {
             unsplash: this.settings.unsplash ? unsplashConfig.defaultHeaders : null,
             tenor: this.config.tenor?.googleApiKey ? this.config.tenor : null,
             fetchAutocompleteLinks,
@@ -472,201 +428,14 @@ export default class KoenigLexicalEditor extends Component {
             siteTitle: this.settings.title,
             siteDescription: this.settings.description,
             siteUrl: this.config.getSiteUrl('/'),
-            stripeEnabled: checkStripeEnabled() // returns a boolean
+            stripeEnabled // returns a boolean
         };
-        const cardConfig = Object.assign({}, defaultCardConfig, props.cardConfig, {pinturaConfig: this.pinturaConfig});
+    }
 
-        const useFileUpload = (type = 'image') => {
-            const [progress, setProgress] = React.useState(0);
-            const [isLoading, setLoading] = React.useState(false);
-            const [errors, setErrors] = React.useState([]);
-            const [filesNumber, setFilesNumber] = React.useState(0);
+    ReactComponent = (props) => {
+        const cardConfig = {...this.defaultCardConfig, ...props.cardConfig, pinturaConfig: this.pinturaConfig};
 
-            const progressTracker = React.useRef(new Map());
-
-            function updateProgress() {
-                if (progressTracker.current.size === 0) {
-                    setProgress(0);
-                    return;
-                }
-
-                let totalProgress = 0;
-
-                progressTracker.current.forEach(value => totalProgress += value);
-
-                setProgress(Math.round(totalProgress / progressTracker.current.size));
-            }
-
-            // we only check the file extension by default because IE doesn't always
-            // expose the mime-type, we'll rely on the API for final validation
-            function defaultValidator(file) {
-                // if type is file we don't need to validate since the card can accept any file type
-                if (type === 'file') {
-                    return true;
-                }
-                let extensions = fileTypes[type].extensions;
-                let [, extension] = (/(?:\.([^.]+))?$/).exec(file.name);
-
-                // if extensions is falsy exit early and accept all files
-                if (!extensions) {
-                    return true;
-                }
-
-                if (!Array.isArray(extensions)) {
-                    extensions = extensions.split(',');
-                }
-
-                if (!extension || extensions.indexOf(extension.toLowerCase()) === -1) {
-                    let validExtensions = `.${extensions.join(', .').toUpperCase()}`;
-                    return `The file type you uploaded is not supported. Please use ${validExtensions}`;
-                }
-
-                return true;
-            }
-
-            const validate = (files = []) => {
-                const validationResult = [];
-
-                for (let i = 0; i < files.length; i += 1) {
-                    let file = files[i];
-                    let result = defaultValidator(file);
-                    if (result === true) {
-                        continue;
-                    }
-
-                    validationResult.push({fileName: file.name, message: result});
-                }
-
-                return validationResult;
-            };
-
-            const _uploadFile = async (file, {formData = {}} = {}) => {
-                progressTracker.current[file] = 0;
-
-                const fileFormData = new FormData();
-                fileFormData.append('file', file, file.name);
-
-                Object.keys(formData || {}).forEach((key) => {
-                    fileFormData.append(key, formData[key]);
-                });
-
-                const url = `${ghostPaths().apiRoot}${fileTypes[type].endpoint}`;
-
-                try {
-                    const requestMethod = fileTypes[type].requestMethod || 'post';
-                    const response = await this.ajax[requestMethod](url, {
-                        data: fileFormData,
-                        processData: false,
-                        contentType: false,
-                        dataType: 'text',
-                        xhr: () => {
-                            const xhr = new window.XMLHttpRequest();
-
-                            xhr.upload.addEventListener('progress', (event) => {
-                                if (event.lengthComputable) {
-                                    progressTracker.current.set(file, (event.loaded / event.total) * 100);
-                                    updateProgress();
-                                }
-                            }, false);
-
-                            return xhr;
-                        }
-                    });
-
-                    // force tracker progress to 100% in case we didn't get a final event
-                    progressTracker.current.set(file, 100);
-                    updateProgress();
-
-                    let uploadResponse;
-                    let responseUrl;
-
-                    try {
-                        uploadResponse = JSON.parse(response);
-                    } catch (error) {
-                        if (!(error instanceof SyntaxError)) {
-                            throw error;
-                        }
-                    }
-
-                    if (uploadResponse) {
-                        const resource = uploadResponse[fileTypes[type].resourceName];
-                        if (resource && Array.isArray(resource) && resource[0]) {
-                            responseUrl = resource[0].url;
-                        }
-                    }
-
-                    return {
-                        url: responseUrl,
-                        fileName: file.name
-                    };
-                } catch (error) {
-                    console.error(error); // eslint-disable-line
-
-                    // grab custom error message if present
-                    let message = error.payload?.errors?.[0]?.message || '';
-                    let context = error.payload?.errors?.[0]?.context || '';
-
-                    // fall back to EmberData/ember-ajax default message for error type
-                    if (!message) {
-                        message = error.message;
-                    }
-
-                    // TODO: check for or expose known error types?
-                    const errorResult = {
-                        message,
-                        context,
-                        fileName: file.name
-                    };
-
-                    throw errorResult;
-                }
-            };
-
-            const upload = async (files = [], options = {}) => {
-                setFilesNumber(files.length);
-                setLoading(true);
-
-                const validationResult = validate(files);
-
-                if (validationResult.length) {
-                    setErrors(validationResult);
-                    setLoading(false);
-                    setProgress(100);
-
-                    return null;
-                }
-
-                const uploadPromises = [];
-
-                for (let i = 0; i < files.length; i += 1) {
-                    const file = files[i];
-                    uploadPromises.push(_uploadFile(file, options));
-                }
-
-                try {
-                    const uploadResult = await Promise.all(uploadPromises);
-                    setProgress(100);
-                    progressTracker.current.clear();
-
-                    setLoading(false);
-
-                    setErrors([]); // components expect array of objects: { fileName: string, message: string }[]
-
-                    return uploadResult;
-                } catch (error) {
-                    console.error(error); // eslint-disable-line no-console
-
-                    setErrors([...errors, error]);
-                    setLoading(false);
-                    setProgress(100);
-                    progressTracker.current.clear();
-
-                    return null;
-                }
-            };
-
-            return {progress, isLoading, upload, errors, filesNumber};
-        };
+        const useFileUpload = (type = 'image') => _useFileUpload(this.ajax, type);
 
         // TODO: react component isn't re-rendered when its props are changed meaning we don't transition
         // to enabling multiplayer when a new post is saved and it gets an ID we can use for a YJS doc

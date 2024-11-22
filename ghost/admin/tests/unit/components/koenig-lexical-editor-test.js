@@ -17,7 +17,7 @@ describe('Unit: Component: koenig-lexical-editor', function () {
         });
 
         it('handles members disabled', function () {
-            decoratePostSearchResult(result, {membersEnabled: false, timezone: 'Etc/UTC'});
+            result = decoratePostSearchResult(result, {membersEnabled: false, timezone: 'Etc/UTC'});
 
             expect(result.metaText).to.equal('8 May 2024');
             expect(result.MetaIcon).to.be.undefined;
@@ -25,7 +25,7 @@ describe('Unit: Component: koenig-lexical-editor', function () {
         });
 
         it('handles public content', function () {
-            decoratePostSearchResult(result, {membersEnabled: true, timezone: 'Etc/UTC'});
+            result = decoratePostSearchResult(result, {membersEnabled: true, timezone: 'Etc/UTC'});
 
             expect(result.metaText).to.equal('8 May 2024');
             expect(result.MetaIcon).to.be.undefined;
@@ -34,7 +34,7 @@ describe('Unit: Component: koenig-lexical-editor', function () {
 
         it('handles members content', function () {
             result.visibility = 'members';
-            decoratePostSearchResult(result, {membersEnabled: true, timezone: 'Etc/UTC'});
+            result = decoratePostSearchResult(result, {membersEnabled: true, timezone: 'Etc/UTC'});
 
             expect(result.metaText).to.equal('8 May 2024');
             expect(result.MetaIcon).to.exist;
@@ -43,7 +43,7 @@ describe('Unit: Component: koenig-lexical-editor', function () {
 
         it('handles paid members content', function () {
             result.visibility = 'paid';
-            decoratePostSearchResult(result, {membersEnabled: true, timezone: 'Etc/UTC'});
+            result = decoratePostSearchResult(result, {membersEnabled: true, timezone: 'Etc/UTC'});
 
             expect(result.metaText).to.equal('8 May 2024');
             expect(result.MetaIcon).to.exist;
@@ -52,7 +52,7 @@ describe('Unit: Component: koenig-lexical-editor', function () {
 
         it('handles specific tiers content', function () {
             result.visibility = 'tiers';
-            decoratePostSearchResult(result, {membersEnabled: true, timezone: 'Etc/UTC'});
+            result = decoratePostSearchResult(result, {membersEnabled: true, timezone: 'Etc/UTC'});
 
             expect(result.metaText).to.equal('8 May 2024');
             expect(result.MetaIcon).to.exist;
@@ -61,7 +61,7 @@ describe('Unit: Component: koenig-lexical-editor', function () {
 
         it('handles unknown visibility', function () {
             result.visibility = 'unknown';
-            decoratePostSearchResult(result, {membersEnabled: true, timezone: 'Etc/UTC'});
+            result = decoratePostSearchResult(result, {membersEnabled: true, timezone: 'Etc/UTC'});
 
             expect(result.metaText).to.equal('8 May 2024');
             expect(result.MetaIcon).to.be.undefined;
@@ -75,15 +75,13 @@ describe('Unit: Component: koenig-lexical-editor', function () {
 
         beforeEach(function () {
             context = {
-                fetchOffersTask: {
-                    perform: () => {}
-                },
+                fetchOffers: () => {},
                 config: {
                     getSiteUrl: code => `https://example.com?offer=${code}`
                 }
             };
 
-            performStub = sinon.stub(context.fetchOffersTask, 'perform');
+            performStub = sinon.stub(context, 'fetchOffers');
         });
 
         afterEach(function () {
